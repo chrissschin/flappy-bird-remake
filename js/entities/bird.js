@@ -1,3 +1,5 @@
+//entity
+
 var graphicsComponent = require("../components/graphics/bird");
 
 var Bird = function() {

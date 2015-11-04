@@ -41,6 +41,8 @@ gulp.task('scripts', function() {
   .pipe(gulp.dest('build/js'));
 });
 
+//default
+gulp.task('default', ['scripts']);
 
 // Build task
 gulp.task('build', ['jshint','minifyhtml','scripts', 'sass']);
