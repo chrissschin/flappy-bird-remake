@@ -4,17 +4,15 @@ var BirdGraphicsComponent = function(entity) {
   this.entity = entity;
 };
 
-BirdGraphicsComponent.prototype.draw = function(context){
-  console.log("Drawing a bird");
+BirdGraphicsComponent.prototype.draw = function(context, position, size) {
 
-  context.fillStyle = "green"
-  context.beginPath();
-  context.translate(0, 1.5);
-  context.arc(50, 50, 10, 0, 2 * Math.PI);
-  context.arc(50, 75, 10, 0, 2 * Math.PI);
-  context.arc(50, 100, 10, 0, 2 * Math.PI);
-  context.fillRect(50, 125, 20, 50);
-  context.fill();
+    context.save();
+    context.translate(position.x, position.y);
+    context.scale(size, size);
+    context.beginPath();
+    context.arc(0, 0, 1, 0, 2 * Math.PI);
+    context.fill();
+    contet.restore();
 
 };
 

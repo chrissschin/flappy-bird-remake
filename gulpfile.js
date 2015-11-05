@@ -42,7 +42,7 @@ gulp.task('scripts', function() {
 });
 
 //default
-gulp.task('default', ['scripts']);
+gulp.task('default', ['jshint', 'scripts']);
 
 // Build task
 gulp.task('build', ['jshint','minifyhtml','scripts', 'sass']);
