@@ -7,6 +7,32 @@ var sass = require('gulp-sass');
 var uglify = require('gulp-uglify');
 var source = require('vinyl-source-stream');
 var buffer = require('vinyl-buffer');
+var browserSync = require('browser-sync').create();
+
+
+// Static Server + watching scss/html files
+gulp.task('serve', ['sass'], function() {
+
+    browserSync.init({
+        server: "./"
+    });
+
+    gulp.watch("scss/*.scss", ['sass']);
+    gulp.watch('js/*.js').on('change', browserSync.reload);
+    gulp.watch("*.html").on('change', browserSync.reload);
+});
+
+gulp.task('buildserve', function() {
+
+    browserSync.init({
+        server: "./build"
+    });
+
+    gulp.watch("css/*.css").on('change', browserSync.reload);
+    gulp.watch('js/*.js').on('change', browserSync.reload);
+    gulp.watch("*.html").on('change', browserSync.reload);
+});
+
 
 
 //js linting
