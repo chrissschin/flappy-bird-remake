@@ -34,6 +34,7 @@ GraphicsSystem.prototype.tick = function() {
     }
 
     entity.components.graphics.draw(this.context);
+    
   }
 
   this.context.restore();
