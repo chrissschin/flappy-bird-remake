@@ -11,14 +11,14 @@ var browserSync = require('browser-sync').create();
 
 
 // Static Server + watching scss/html files
-gulp.task('serve', ['sass'], function() {
+gulp.task('serve', ['sass', 'localscripts'], function() {
 
     browserSync.init({
         server: "./"
     });
 
     gulp.watch("scss/*.scss", ['sass']);
-    gulp.watch('js/*.js').on('change', browserSync.reload);
+    gulp.watch(['js/*.js', 'js/**/*.js', 'js/**/**/*.js' ], ['localscripts']).on('change', browserSync.reload);
     gulp.watch("*.html").on('change', browserSync.reload);
 });
 
@@ -65,6 +65,15 @@ gulp.task('scripts', function() {
   .pipe(buffer())
   .pipe(uglify())
   .pipe(gulp.dest('build/js'));
+});
+
+gulp.task('localscripts', function() {
+  return browserify(['js/main.js'])
+  .bundle()
+  .pipe(source('main.js'))
+  .pipe(buffer())
+  .pipe(uglify())
+  .pipe(gulp.dest('js/browser'));
 });
 
 //default
