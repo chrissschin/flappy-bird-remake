@@ -71,8 +71,6 @@ gulp.task('localscripts', function() {
   return browserify(['js/main.js'])
   .bundle()
   .pipe(source('main.js'))
-  .pipe(buffer())
-  .pipe(uglify())
   .pipe(gulp.dest('js/browser'));
 });
 
