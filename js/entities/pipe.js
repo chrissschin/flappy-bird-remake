@@ -6,7 +6,7 @@ var physicsComponent = require('../components/physics/physics');
 var Pipe = function() {
   var physics = new physicsComponent.PhysicsComponent(this);
   physics.position.x = 0.5;
-  physics.acceleration.x = -.5;
+  physics.acceleration.x = -.25;
 
     var graphics = new graphicsComponent.PipeGraphicsComponent(this);
 

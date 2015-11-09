@@ -11,8 +11,8 @@ PipeGraphicsComponent.prototype.draw = function(context) {
   context.save();
   context.beginPath();
   context.translate(position.x, position.y);
-  context.strokeRect(0, 0, 2, 0);
-  context.fill();
+  context.strokeRect(.5, 1.25, -.1, 0);
+  context.strokeRect(.5, -.25, -.1, 0);
   context.closePath();
   context.restore();
 
