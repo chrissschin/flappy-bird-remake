@@ -4,13 +4,16 @@ var inputSystem = require('./systems/input');
 
 
 var bird = require('./entities/bird');
+var pipe = require('./entities/pipe');
 
-console.log(bird); //log whats going on
-console.log(graphicsSystem); //log whats going on
+//log whats going on
+console.log(pipe);
+console.log(bird);
+console.log(graphicsSystem);
 console.log(inputSystem);
 
 var FlappyBird = function() {
-    this.entities = [new bird.Bird()];
+    this.entities = [new bird.Bird(), new pipe.Pipe()];
     this.graphics = new graphicsSystem.GraphicsSystem(this.entities);
     this.physics = new physicsSystem.PhysicsSystem(this.entities);
     this.inputs = new inputSystem.InputSystem(this.entities);
