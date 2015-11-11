@@ -24,8 +24,9 @@ exports.BirdGraphicsComponent = BirdGraphicsComponent;
 },{}],2:[function(require,module,exports){
 //pipe entity
 
-var PipeGraphicsComponent = function(entity) {
+var PipeGraphicsComponent = function(entity, size) {
   this.entity = entity;
+  this.size = size;
 };
 
 PipeGraphicsComponent.prototype.draw = function(context) {
@@ -35,8 +36,10 @@ PipeGraphicsComponent.prototype.draw = function(context) {
   context.save();
   context.beginPath();
   context.translate(position.x, position.y);
-  context.strokeRect(.5, 1.25, -.1, 0);
-  context.strokeRect(.5, -.25, -.1, 0);
+  context.rect(-this.size.x / 2, -this.size.y / 2, this.size.x, this.size.y);
+  context.fill();
+  //context.strokeRect(.5, 1.25, -.1, 0);
+  //context.strokeRect(.5, -.25, -.1, 0);
   context.closePath();
   context.restore();
 
@@ -102,12 +105,13 @@ exports.Bird = Bird;
 var graphicsComponent = require("../components/graphics/pipe");
 var physicsComponent = require('../components/physics/physics');
 
-var Pipe = function() {
-  var physics = new physicsComponent.PhysicsComponent(this);
-  physics.position.x = 0.5;
-  physics.acceleration.x = -.25;
 
-    var graphics = new graphicsComponent.PipeGraphicsComponent(this);
+var Pipe = function(position, size) {
+  var physics = new physicsComponent.PhysicsComponent(this);
+  physics.position = position;
+  physics.velocity.x = -.5;
+
+    var graphics = new graphicsComponent.PipeGraphicsComponent(this, size);
 
     this.components = {
         physics: physics,
@@ -122,7 +126,7 @@ exports.Pipe = Pipe;
 var graphicsSystem = require('./systems/graphics');
 var physicsSystem = require('./systems/physics');
 var inputSystem = require('./systems/input');
-
+var makePipes = require('./systems/makepipes');
 
 var bird = require('./entities/bird');
 var pipe = require('./entities/pipe');
@@ -134,21 +138,24 @@ console.log(graphicsSystem);
 console.log(inputSystem);
 
 var FlappyBird = function() {
-    this.entities = [new bird.Bird(), new pipe.Pipe()];
+    this.entities = [new bird.Bird()];
     this.graphics = new graphicsSystem.GraphicsSystem(this.entities);
     this.physics = new physicsSystem.PhysicsSystem(this.entities);
     this.inputs = new inputSystem.InputSystem(this.entities);
+    this.pipes = new makePipes.MakePipes(this.entities);
 };
 
 FlappyBird.prototype.run = function() {
+
     this.graphics.run();
     this.physics.run();
     this.inputs.run();
+    this.pipes.run();
 };
 
 exports.FlappyBird = FlappyBird;
 
-},{"./entities/bird":4,"./entities/pipe":5,"./systems/graphics":8,"./systems/input":9,"./systems/physics":10}],7:[function(require,module,exports){
+},{"./entities/bird":4,"./entities/pipe":5,"./systems/graphics":8,"./systems/input":9,"./systems/makepipes":10,"./systems/physics":11}],7:[function(require,module,exports){
 var flappyBird = require('./flappy_bird');
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -218,13 +225,65 @@ InputSystem.prototype.run = function() {
 
 InputSystem.prototype.onClick = function() {
     var bird = this.entities[0];
-    bird.components.physics.velocity.y = 0.7;
+    bird.components.physics.velocity.y = 0.6;
 
 };
+
 
 exports.InputSystem = InputSystem;
 
 },{}],10:[function(require,module,exports){
+var pipe = require('../entities/pipe');
+
+var MakePipes = function(entities) {
+  this.entities = entities;
+
+  this.canvas = document.getElementById('main-canvas');
+
+  this.interval = null;
+};
+
+MakePipes.prototype.run = function() {
+  this.interval = window.setInterval(this.tick.bind(this), 2000);
+};
+
+
+MakePipes.prototype.tick = function() {
+  //every two seconds new Pipes
+  var right = 0.5 * this.canvas.width / this.canvas.height;
+  var gapPosition = 0.4 + Math.random() * .2;
+      // 0.2 is the pipe gap
+  var height = gapPosition - 0.2 / 2;
+
+  var position = {
+    x: right + 0.15 / 2,
+    y: height / 2
+  };
+  var size = {
+    x: 0.15,
+    y: height
+  };
+
+  this.entities.push(new pipe.Pipe(position, size));
+
+  var height = 1 - gapPosition - 0.2 / 2;
+
+  var position = {
+    x: right + 0.15 / 2,
+    y: 1 - height / 2
+  };
+  var size = {
+    x: 0.15,
+    y: height
+  };
+
+  this.entities.push(new pipe.Pipe(position, size));
+
+};
+
+exports.MakePipes = MakePipes;
+
+},{"../entities/pipe":5}],11:[function(require,module,exports){
 var PhysicsSystem = function(entities) {
   this.entities = entities;
 };
