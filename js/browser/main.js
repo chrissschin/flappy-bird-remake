@@ -1,4 +1,116 @@
 (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
+var CircleCollisionComponent = function(entity, radius) {
+    this.entity = entity;
+    this.radius = radius;
+    this.type = 'circle';
+};
+
+CircleCollisionComponent.prototype.collidesWith = function(entity) {
+  if (entity.components.collision.type == 'circle') {
+    return this.collideCircle(entity);
+  }
+  else if (entity.components.collision.type == 'rect') {
+    return this.collideRect(entity);
+  }
+  return false;
+
+};
+
+CircleCollisionComponent.prototype.collideCircle = function(entity) {
+  var positionA = this.entity.components.physics.position;
+  var positionB = entity.components.physics.position;
+
+  var radiusA = this.radius;
+  var radiusB = entity.components.collision.radius;
+
+  var diff = {x: positionA.x - positionB.x,
+              y: positionA.y - positionB.y};
+
+  var distanceSquared = diff.x * diff.x + diff.y * diff.y;
+  var radiusSum = radiusA + radiusB;
+
+  return distanceSquared < radiusSum * radiusSum;
+};
+
+CircleCollisionComponent.prototype.collideRect = function(entity) {
+  var clamp = function(value, low, high) {
+      if (value < low) {
+          return low;
+      }
+      if (value > high) {
+          return high;
+      }
+      return value;
+  };
+
+  var positionA = this.entity.components.physics.position;
+  var positionB = entity.components.physics.position;
+  var sizeB = entity.components.collision.size;
+
+  var closest = {
+      x: clamp(positionA.x, positionB.x - sizeB.x / 2,
+               positionB.x + sizeB.x / 2),
+      y: clamp(positionA.y, positionB.y - sizeB.y / 2,
+               positionB.y + sizeB.y / 2)
+  };
+
+
+  var radiusA = this.radius;
+
+  var diff = {x: positionA.x - closest.x,
+              y: positionA.y - closest.y};
+
+  var distanceSquared = diff.x * diff.x + diff.y * diff.y;
+  return distanceSquared < radiusA * radiusA;
+};
+
+exports.CircleCollisionComponent = CircleCollisionComponent;
+
+},{}],2:[function(require,module,exports){
+var RectCollisionComponent = function(entity, size) {
+    this.entity = entity;
+    this.size = size;
+    this.type = 'rect';
+};
+
+RectCollisionComponent.prototype.collidesWith = function(entity) {
+    if (entity.components.collision.type == 'circle') {
+        return this.collideCircle(entity);
+    }
+    else if (entity.components.collision.type == 'rect') {
+        return this.collideRect(entity);
+    }
+    return false;
+};
+
+RectCollisionComponent.prototype.collideCircle = function(entity) {
+    return entity.components.collision.collideRect(this.entity);
+};
+
+RectCollisionComponent.prototype.collideRect = function(entity) {
+  var positionA = this.entity.components.physics.position;
+  var positionB = entity.components.physics.position;
+
+  var sizeA = this.size;
+  var sizeB = entity.components.collision.size;
+
+  var leftA = positionA.x - sizeA.x / 2;
+  var rightA = positionA.x + sizeA.x / 2;
+  var bottomA = positionA.y - sizeA.y / 2;
+  var topA = positionA.y + sizeA.y / 2;
+
+  var leftB = positionB.x - sizeB.x / 2;
+  var rightB = positionB.x + sizeB.x / 2;
+  var bottomB = positionB.y - sizeB.y / 2;
+  var topB = positionB.y + sizeB.y / 2;
+
+  return !(leftA > rightB || leftB > rightA ||
+           bottomA > topB || bottomB > topA);
+};
+
+exports.RectCollisionComponent = RectCollisionComponent;
+
+},{}],3:[function(require,module,exports){
 //graphics component
 
 var BirdGraphicsComponent = function(entity) {
@@ -21,7 +133,7 @@ BirdGraphicsComponent.prototype.draw = function(context) {
 
 exports.BirdGraphicsComponent = BirdGraphicsComponent;
 
-},{}],2:[function(require,module,exports){
+},{}],4:[function(require,module,exports){
 //pipe entity
 
 var PipeGraphicsComponent = function(entity, size) {
@@ -49,7 +161,7 @@ PipeGraphicsComponent.prototype.draw = function(context) {
 
 exports.PipeGraphicsComponent = PipeGraphicsComponent;
 
-},{}],3:[function(require,module,exports){
+},{}],5:[function(require,module,exports){
 var PhysicsComponent = function(entity){
   this.entity = entity;
 
@@ -77,72 +189,109 @@ PhysicsComponent.prototype.update = function(delta) {
 
 exports.PhysicsComponent = PhysicsComponent;
 
-},{}],4:[function(require,module,exports){
+},{}],6:[function(require,module,exports){
 //entity
 
-var graphicsComponent = require("../components/graphics/bird");
 var physicsComponent = require("../components/physics/physics");
+var graphicsComponent = require("../components/graphics/bird");
+var collisionComponent = require("../components/collision/circle");
+var flappyBird = require('../flappy_bird');
+var pipe = require('../entities/pipe');
+// var settings = require("../settings");
 
-var Bird = function() {
+var Bird = function(bus) {
+    this.eventEmits = bus;
     var physics = new physicsComponent.PhysicsComponent(this);
     physics.position.y = 0.5;
     physics.acceleration.y = -2;
 
     var graphics = new graphicsComponent.BirdGraphicsComponent(this);
+    var collision = new collisionComponent.CircleCollisionComponent(this, 0.02);
+    collision.onCollision = this.onCollision.bind(this);
 
     this.components = {
         physics: physics,
         graphics: graphics,
+        collision: collision
     };
 };
 
+Bird.prototype.onCollision = function(entity) {
+
+    if (entity instanceof pipe.Pipe) {
+      this.eventEmits.emit('crash');
+      this.reset();
+    }
+
+};
+
+Bird.prototype.reset = function() {
+
+    this.components.physics.position.y = 0.5;
+
+};
 
 exports.Bird = Bird;
 
-},{"../components/graphics/bird":1,"../components/physics/physics":3}],5:[function(require,module,exports){
+},{"../components/collision/circle":1,"../components/graphics/bird":3,"../components/physics/physics":5,"../entities/pipe":7,"../flappy_bird":8}],7:[function(require,module,exports){
 //pipe entity
 
 var graphicsComponent = require("../components/graphics/pipe");
 var physicsComponent = require('../components/physics/physics');
-
+var collisionComponent = require("../components/collision/rect");
 
 var Pipe = function(position, size) {
   var physics = new physicsComponent.PhysicsComponent(this);
   physics.position = position;
   physics.velocity.x = -.5;
 
-    var graphics = new graphicsComponent.PipeGraphicsComponent(this, size);
+  var graphics = new graphicsComponent.PipeGraphicsComponent(this, size);
+  var collision = new collisionComponent.RectCollisionComponent(this, size);
+  collision.onCollision = this.onCollision.bind(this);
 
     this.components = {
         physics: physics,
         graphics: graphics,
+        collision: collision
     };
 };
 
+Pipe.prototype.onCollision = function(entity) {
+    console.log("Bird collided with entity:", entity);
+};
 
 exports.Pipe = Pipe;
 
-},{"../components/graphics/pipe":2,"../components/physics/physics":3}],6:[function(require,module,exports){
+},{"../components/collision/rect":2,"../components/graphics/pipe":4,"../components/physics/physics":5}],8:[function(require,module,exports){
 var graphicsSystem = require('./systems/graphics');
 var physicsSystem = require('./systems/physics');
 var inputSystem = require('./systems/input');
 var makePipes = require('./systems/makepipes');
 
+//event emitter
+var events = require('events').EventEmitter;
+
 var bird = require('./entities/bird');
 var pipe = require('./entities/pipe');
 
+
+
 //log whats going on
-console.log(pipe);
-console.log(bird);
-console.log(graphicsSystem);
-console.log(inputSystem);
+// console.log(pipe);
+// console.log(bird);
+// console.log(graphicsSystem);
+// console.log(inputSystem);
+
+
 
 var FlappyBird = function() {
-    this.entities = [new bird.Bird()];
-    this.graphics = new graphicsSystem.GraphicsSystem(this.entities);
-    this.physics = new physicsSystem.PhysicsSystem(this.entities);
-    this.inputs = new inputSystem.InputSystem(this.entities);
-    this.pipes = new makePipes.MakePipes(this.entities);
+    this.eventEmits = new events();
+    
+    this.entities = [new bird.Bird(this.eventEmits)];
+    this.graphics = new graphicsSystem.GraphicsSystem(this.entities, this.eventEmits);
+    this.physics = new physicsSystem.PhysicsSystem(this.entities, this.eventEmits);
+    this.inputs = new inputSystem.InputSystem(this.entities, this.eventEmits);
+    this.pipes = new makePipes.MakePipes(this.entities, this.eventEmits);
 };
 
 FlappyBird.prototype.run = function() {
@@ -153,17 +302,59 @@ FlappyBird.prototype.run = function() {
     this.pipes.run();
 };
 
+FlappyBird.prototype.reset = function() {
+
+    this.entities = [new bird.Bird()];
+
+};
+
 exports.FlappyBird = FlappyBird;
 
-},{"./entities/bird":4,"./entities/pipe":5,"./systems/graphics":8,"./systems/input":9,"./systems/makepipes":10,"./systems/physics":11}],7:[function(require,module,exports){
+},{"./entities/bird":6,"./entities/pipe":7,"./systems/graphics":11,"./systems/input":12,"./systems/makepipes":13,"./systems/physics":14,"events":15}],9:[function(require,module,exports){
 var flappyBird = require('./flappy_bird');
 
 document.addEventListener('DOMContentLoaded', function() {
     var app = new flappyBird.FlappyBird();
+    console.log(flappyBird);
     app.run();
 });
 
-},{"./flappy_bird":6}],8:[function(require,module,exports){
+},{"./flappy_bird":8}],10:[function(require,module,exports){
+var CollisionSystem = function(entities) {
+    this.entities = entities;
+};
+
+CollisionSystem.prototype.tick = function() {
+    for (var i=0; i<this.entities.length; i++) {
+        var entityA = this.entities[i];
+        if (!'collision' in entityA.components) {
+            continue;
+        }
+
+        for (var j=i+1; j<this.entities.length; j++) {
+            var entityB = this.entities[j];
+            if (!'collision' in entityB.components) {
+                continue;
+            }
+
+            if (!entityA.components.collision.collidesWith(entityB)) {
+                continue;
+            }
+
+            if (entityA.components.collision.onCollision) {
+                entityA.components.collision.onCollision(entityB);
+            }
+
+            if (entityB.components.collision.onCollision) {
+                entityB.components.collision.onCollision(entityA);
+            }
+        }
+    }
+};
+
+exports.CollisionSystem = CollisionSystem;
+
+},{}],11:[function(require,module,exports){
 var GraphicsSystem = function(entities) {
   this.entities = entities;
   // Canvas is where we draw
@@ -211,7 +402,7 @@ GraphicsSystem.prototype.tick = function() {
 
 exports.GraphicsSystem = GraphicsSystem
 
-},{}],9:[function(require,module,exports){
+},{}],12:[function(require,module,exports){
 var InputSystem = function(entities) {
     this.entities = entities;
 
@@ -232,15 +423,19 @@ InputSystem.prototype.onClick = function() {
 
 exports.InputSystem = InputSystem;
 
-},{}],10:[function(require,module,exports){
+},{}],13:[function(require,module,exports){
 var pipe = require('../entities/pipe');
 
-var MakePipes = function(entities) {
+var MakePipes = function(entities, bus) {
+
   this.entities = entities;
 
   this.canvas = document.getElementById('main-canvas');
 
   this.interval = null;
+
+  this.eventEmits = bus;
+  this.eventEmits.on('crash', this.removePipes.bind(this));
 };
 
 MakePipes.prototype.run = function() {
@@ -281,11 +476,24 @@ MakePipes.prototype.tick = function() {
 
 };
 
+MakePipes.prototype.removePipes = function() {
+  for (var i = this.entities.length - 1; i >= 0; i-- ) {
+    var entity = this.entities[i];
+    if (entity instanceof pipe.Pipe) {
+      this.entities.splice(i, 1);
+    }
+  }
+  console.log("removing pipes");
+}
+
 exports.MakePipes = MakePipes;
 
-},{"../entities/pipe":5}],11:[function(require,module,exports){
+},{"../entities/pipe":7}],14:[function(require,module,exports){
+var collisionSystem = require("./collision");
+
 var PhysicsSystem = function(entities) {
   this.entities = entities;
+  this.collisionSystem = new collisionSystem.CollisionSystem(entities);
 };
 
 PhysicsSystem.prototype.run = function() {
@@ -296,13 +504,314 @@ PhysicsSystem.prototype.run = function() {
 PhysicsSystem.prototype.tick = function() {
   for (var i = 0; i < this.entities.length; i++) {
     var entity = this.entities[i];
-    if(!'physics' in entity.components) {
-      continue;
-    }
+    // if(!'physics' in entity.components) {
+    //   continue;
+    // }
     entity.components.physics.update(1/60);
   }
+  this.collisionSystem.tick();
 };
 
 exports.PhysicsSystem = PhysicsSystem;
 
-},{}]},{},[7]);
+},{"./collision":10}],15:[function(require,module,exports){
+// Copyright Joyent, Inc. and other Node contributors.
+//
+// Permission is hereby granted, free of charge, to any person obtaining a
+// copy of this software and associated documentation files (the
+// "Software"), to deal in the Software without restriction, including
+// without limitation the rights to use, copy, modify, merge, publish,
+// distribute, sublicense, and/or sell copies of the Software, and to permit
+// persons to whom the Software is furnished to do so, subject to the
+// following conditions:
+//
+// The above copyright notice and this permission notice shall be included
+// in all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+// OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN
+// NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+// DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
+// OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
+// USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+function EventEmitter() {
+  this._events = this._events || {};
+  this._maxListeners = this._maxListeners || undefined;
+}
+module.exports = EventEmitter;
+
+// Backwards-compat with node 0.10.x
+EventEmitter.EventEmitter = EventEmitter;
+
+EventEmitter.prototype._events = undefined;
+EventEmitter.prototype._maxListeners = undefined;
+
+// By default EventEmitters will print a warning if more than 10 listeners are
+// added to it. This is a useful default which helps finding memory leaks.
+EventEmitter.defaultMaxListeners = 10;
+
+// Obviously not all Emitters should be limited to 10. This function allows
+// that to be increased. Set to zero for unlimited.
+EventEmitter.prototype.setMaxListeners = function(n) {
+  if (!isNumber(n) || n < 0 || isNaN(n))
+    throw TypeError('n must be a positive number');
+  this._maxListeners = n;
+  return this;
+};
+
+EventEmitter.prototype.emit = function(type) {
+  var er, handler, len, args, i, listeners;
+
+  if (!this._events)
+    this._events = {};
+
+  // If there is no 'error' event listener then throw.
+  if (type === 'error') {
+    if (!this._events.error ||
+        (isObject(this._events.error) && !this._events.error.length)) {
+      er = arguments[1];
+      if (er instanceof Error) {
+        throw er; // Unhandled 'error' event
+      }
+      throw TypeError('Uncaught, unspecified "error" event.');
+    }
+  }
+
+  handler = this._events[type];
+
+  if (isUndefined(handler))
+    return false;
+
+  if (isFunction(handler)) {
+    switch (arguments.length) {
+      // fast cases
+      case 1:
+        handler.call(this);
+        break;
+      case 2:
+        handler.call(this, arguments[1]);
+        break;
+      case 3:
+        handler.call(this, arguments[1], arguments[2]);
+        break;
+      // slower
+      default:
+        args = Array.prototype.slice.call(arguments, 1);
+        handler.apply(this, args);
+    }
+  } else if (isObject(handler)) {
+    args = Array.prototype.slice.call(arguments, 1);
+    listeners = handler.slice();
+    len = listeners.length;
+    for (i = 0; i < len; i++)
+      listeners[i].apply(this, args);
+  }
+
+  return true;
+};
+
+EventEmitter.prototype.addListener = function(type, listener) {
+  var m;
+
+  if (!isFunction(listener))
+    throw TypeError('listener must be a function');
+
+  if (!this._events)
+    this._events = {};
+
+  // To avoid recursion in the case that type === "newListener"! Before
+  // adding it to the listeners, first emit "newListener".
+  if (this._events.newListener)
+    this.emit('newListener', type,
+              isFunction(listener.listener) ?
+              listener.listener : listener);
+
+  if (!this._events[type])
+    // Optimize the case of one listener. Don't need the extra array object.
+    this._events[type] = listener;
+  else if (isObject(this._events[type]))
+    // If we've already got an array, just append.
+    this._events[type].push(listener);
+  else
+    // Adding the second element, need to change to array.
+    this._events[type] = [this._events[type], listener];
+
+  // Check for listener leak
+  if (isObject(this._events[type]) && !this._events[type].warned) {
+    if (!isUndefined(this._maxListeners)) {
+      m = this._maxListeners;
+    } else {
+      m = EventEmitter.defaultMaxListeners;
+    }
+
+    if (m && m > 0 && this._events[type].length > m) {
+      this._events[type].warned = true;
+      console.error('(node) warning: possible EventEmitter memory ' +
+                    'leak detected. %d listeners added. ' +
+                    'Use emitter.setMaxListeners() to increase limit.',
+                    this._events[type].length);
+      if (typeof console.trace === 'function') {
+        // not supported in IE 10
+        console.trace();
+      }
+    }
+  }
+
+  return this;
+};
+
+EventEmitter.prototype.on = EventEmitter.prototype.addListener;
+
+EventEmitter.prototype.once = function(type, listener) {
+  if (!isFunction(listener))
+    throw TypeError('listener must be a function');
+
+  var fired = false;
+
+  function g() {
+    this.removeListener(type, g);
+
+    if (!fired) {
+      fired = true;
+      listener.apply(this, arguments);
+    }
+  }
+
+  g.listener = listener;
+  this.on(type, g);
+
+  return this;
+};
+
+// emits a 'removeListener' event iff the listener was removed
+EventEmitter.prototype.removeListener = function(type, listener) {
+  var list, position, length, i;
+
+  if (!isFunction(listener))
+    throw TypeError('listener must be a function');
+
+  if (!this._events || !this._events[type])
+    return this;
+
+  list = this._events[type];
+  length = list.length;
+  position = -1;
+
+  if (list === listener ||
+      (isFunction(list.listener) && list.listener === listener)) {
+    delete this._events[type];
+    if (this._events.removeListener)
+      this.emit('removeListener', type, listener);
+
+  } else if (isObject(list)) {
+    for (i = length; i-- > 0;) {
+      if (list[i] === listener ||
+          (list[i].listener && list[i].listener === listener)) {
+        position = i;
+        break;
+      }
+    }
+
+    if (position < 0)
+      return this;
+
+    if (list.length === 1) {
+      list.length = 0;
+      delete this._events[type];
+    } else {
+      list.splice(position, 1);
+    }
+
+    if (this._events.removeListener)
+      this.emit('removeListener', type, listener);
+  }
+
+  return this;
+};
+
+EventEmitter.prototype.removeAllListeners = function(type) {
+  var key, listeners;
+
+  if (!this._events)
+    return this;
+
+  // not listening for removeListener, no need to emit
+  if (!this._events.removeListener) {
+    if (arguments.length === 0)
+      this._events = {};
+    else if (this._events[type])
+      delete this._events[type];
+    return this;
+  }
+
+  // emit removeListener for all listeners on all events
+  if (arguments.length === 0) {
+    for (key in this._events) {
+      if (key === 'removeListener') continue;
+      this.removeAllListeners(key);
+    }
+    this.removeAllListeners('removeListener');
+    this._events = {};
+    return this;
+  }
+
+  listeners = this._events[type];
+
+  if (isFunction(listeners)) {
+    this.removeListener(type, listeners);
+  } else if (listeners) {
+    // LIFO order
+    while (listeners.length)
+      this.removeListener(type, listeners[listeners.length - 1]);
+  }
+  delete this._events[type];
+
+  return this;
+};
+
+EventEmitter.prototype.listeners = function(type) {
+  var ret;
+  if (!this._events || !this._events[type])
+    ret = [];
+  else if (isFunction(this._events[type]))
+    ret = [this._events[type]];
+  else
+    ret = this._events[type].slice();
+  return ret;
+};
+
+EventEmitter.prototype.listenerCount = function(type) {
+  if (this._events) {
+    var evlistener = this._events[type];
+
+    if (isFunction(evlistener))
+      return 1;
+    else if (evlistener)
+      return evlistener.length;
+  }
+  return 0;
+};
+
+EventEmitter.listenerCount = function(emitter, type) {
+  return emitter.listenerCount(type);
+};
+
+function isFunction(arg) {
+  return typeof arg === 'function';
+}
+
+function isNumber(arg) {
+  return typeof arg === 'number';
+}
+
+function isObject(arg) {
+  return typeof arg === 'object' && arg !== null;
+}
+
+function isUndefined(arg) {
+  return arg === void 0;
+}
+
+},{}]},{},[9]);

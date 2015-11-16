@@ -1,11 +1,15 @@
 var pipe = require('../entities/pipe');
 
-var MakePipes = function(entities) {
+var MakePipes = function(entities, bus) {
+
   this.entities = entities;
 
   this.canvas = document.getElementById('main-canvas');
 
   this.interval = null;
+
+  this.eventEmits = bus;
+  this.eventEmits.on('crash', this.removePipes.bind(this));
 };
 
 MakePipes.prototype.run = function() {
@@ -45,5 +49,15 @@ MakePipes.prototype.tick = function() {
   this.entities.push(new pipe.Pipe(position, size));
 
 };
+
+MakePipes.prototype.removePipes = function() {
+  for (var i = this.entities.length - 1; i >= 0; i-- ) {
+    var entity = this.entities[i];
+    if (entity instanceof pipe.Pipe) {
+      this.entities.splice(i, 1);
+    }
+  }
+  console.log("removing pipes");
+}
 
 exports.MakePipes = MakePipes;
