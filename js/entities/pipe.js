@@ -21,7 +21,7 @@ var Pipe = function(position, size) {
 };
 
 Pipe.prototype.onCollision = function(entity) {
-    console.log("Bird collided with entity:", entity);
+    console.log("Pipe collided with entity:", entity);
 };
 
 exports.Pipe = Pipe;

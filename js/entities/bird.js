@@ -5,6 +5,7 @@ var graphicsComponent = require("../components/graphics/bird");
 var collisionComponent = require("../components/collision/circle");
 var flappyBird = require('../flappy_bird');
 var pipe = require('../entities/pipe');
+var tops = require('../entities/top');
 // var settings = require("../settings");
 
 var Bird = function(bus) {
@@ -26,7 +27,7 @@ var Bird = function(bus) {
 
 Bird.prototype.onCollision = function(entity) {
 
-    if (entity instanceof pipe.Pipe) {
+    if (entity instanceof pipe.Pipe || entity instanceof tops.Top ) {
       this.eventEmits.emit('crash');
       this.reset();
     }
