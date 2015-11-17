@@ -21,7 +21,7 @@ MakeTop.prototype.run = function() {
 
   var right = .5 * this.canvas.width / this.canvas.height;
   var gapPosition = .5;
-  var height = gapPosition - .49;
+  var height = gapPosition - .50;
 
   var position = {
     x: right + 0.15 / 2,
