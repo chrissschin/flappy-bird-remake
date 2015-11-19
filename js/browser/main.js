@@ -136,7 +136,7 @@ exports.TopBottomCollisionComponent = TopBottomCollisionComponent;
 var BackgroundGraphicsComponent = function(entity) {
   this.entity = entity;
   this.backgroundImage = new Image();
-  this.backgroundImage.src = "./images/photobackground.jpeg";
+  this.backgroundImage.src = "./images/photobackground.png";
 
 };
 
@@ -147,7 +147,6 @@ BackgroundGraphicsComponent.prototype.draw = function(context) {
   context.translate(position.x, position.y);
   context.scale(1, -1);
   context.drawImage(this.backgroundImage, 0, 0, this.backgroundImage.width, this.backgroundImage.height, -this.entity.width / 2, -0.5, this.entity.width, this.entity.height);
-
   context.restore();
 
 }
@@ -269,13 +268,13 @@ var background = function(positionx, positiony, width, height) {
   var physics = new physicsComponent.PhysicsComponent(this);
   physics.position.x = positionx;
   physics.position.y = positiony;
-
   physics.velocity.x = -0.2;
 
   this.width = width;
   this.height = height;
 
-  var graphics = graphicsComponent.BackgroundGraphicsComponent(this);
+
+  var graphics = new graphicsComponent.BackgroundGraphicsComponent(this);
 
   this.components = {
     physics: physics,
@@ -481,7 +480,7 @@ BackgroundSystem.prototype.setup = function(){
 
 BackgroundSystem.prototype.reposition = function(){
 
-  for (var i =0; i< this.entities.length; i++) {
+  for (var i = 0; i< this.entities.length; i++) {
     var entity = this.entities[i];
     var restart = (window.innerWidth - 2) / window.innerHeight;
     if (entity instanceof Background.background && entity.components.physics.position.x < -restart) {
@@ -594,7 +593,7 @@ InputSystem.prototype.run = function() {
 };
 
 InputSystem.prototype.onClick = function() {
-    var bird = this.entities[0];
+    var bird = this.entities[2];
     bird.components.physics.velocity.y = 0.6;
 
 };

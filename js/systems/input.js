@@ -10,7 +10,7 @@ InputSystem.prototype.run = function() {
 };
 
 InputSystem.prototype.onClick = function() {
-    var bird = this.entities[0];
+    var bird = this.entities[2];
     bird.components.physics.velocity.y = 0.6;
 
 };

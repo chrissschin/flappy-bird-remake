@@ -22,7 +22,7 @@ BackgroundSystem.prototype.setup = function(){
 
 BackgroundSystem.prototype.reposition = function(){
 
-  for (var i =0; i< this.entities.length; i++) {
+  for (var i = 0; i< this.entities.length; i++) {
     var entity = this.entities[i];
     var restart = (window.innerWidth - 2) / window.innerHeight;
     if (entity instanceof Background.background && entity.components.physics.position.x < -restart) {
