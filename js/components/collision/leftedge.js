@@ -5,10 +5,17 @@ var LeftEdgeCollisionComponent = function(entity, size) {
 };
 
 LeftEdgeCollisionComponent.prototype.collidesWith = function(entity) {
-    if (entity.components.collision.type == 'rect') {
+    if (entity.components.collision.type == 'circle') {
+        return this.collideCircle(entity);
+    }
+    else if (entity.components.collision.type == 'rect') {
         return this.collideRect(entity);
     }
     return false;
+};
+
+LeftEdgeCollisionComponent.prototype.collideCircle = function(entity) {
+    return entity.components.collision.collideRect(this.entity);
 };
 
 LeftEdgeCollisionComponent.prototype.collideRect = function(entity) {

@@ -7,6 +7,7 @@ var flappyBird = require('../flappy_bird');
 var pipe = require('../entities/pipe');
 var tops = require('../entities/top');
 // var settings = require("../settings");
+var marker = require('../entities/marker');
 
 var Bird = function(bus) {
     this.eventEmits = bus;
@@ -30,6 +31,10 @@ Bird.prototype.onCollision = function(entity) {
     if (entity instanceof pipe.Pipe || entity instanceof tops.Top ) {
       this.eventEmits.emit('crash');
       this.reset();
+    }
+    else if (entity instanceof marker.Marker) {
+      this.eventEmits.emit('markercrash', entity);
+      this.eventEmits.emit('scoreincrease');
     }
 
 };

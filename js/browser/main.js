@@ -158,18 +158,24 @@ exports.BackgroundGraphicsComponent = BackgroundGraphicsComponent;
 
 var BirdGraphicsComponent = function(entity) {
   this.entity = entity;
+  this.birdImage = new Image();
+  this.birdImage.src = "./images/Flappy_Bird.png"
 };
 
 BirdGraphicsComponent.prototype.draw = function(context) {
   var position = this.entity.components.physics.position;
-
   context.save();
-  context.fillStyle ='green';
+  // context.fillStyle ='green';
   context.translate(position.x, position.y);
   context.beginPath();
-  context.arc(0, 0, 0.02, 0, 2 * Math.PI);
-  context.fill();
+  context.scale(1, -1);
+  context.drawImage(this.birdImage, 0, 0, .1, .1);
+  // context.arc(0, 0, 0.02, 0, 2 * Math.PI);
+  // context.fill();
+
   context.closePath();
+
+
   context.restore();
 
 };
@@ -182,6 +188,8 @@ exports.BirdGraphicsComponent = BirdGraphicsComponent;
 var PipeGraphicsComponent = function(entity, size) {
   this.entity = entity;
   this.size = size;
+  this.pipeImage = new Image();
+  this.pipeImage.src = "./images/pipe.png"
 };
 
 PipeGraphicsComponent.prototype.draw = function(context) {
@@ -191,7 +199,9 @@ PipeGraphicsComponent.prototype.draw = function(context) {
   context.save();
   context.beginPath();
   context.translate(position.x, position.y);
-  context.rect(-this.size.x / 2, -this.size.y / 2, this.size.x, this.size.y);
+  context.scale(1, -1);
+  context.drawImage(this.pipeImage, -this.size.x / 2, -this.size.y / 2, this.size.x, this.size.y);
+  // context.rect(-this.size.x / 2, -this.size.y / 2, this.size.x, this.size.y);
   context.fill();
   //context.strokeRect(.5, 1.25, -.1, 0);
   //context.strokeRect(.5, -.25, -.1, 0);
@@ -295,6 +305,7 @@ var flappyBird = require('../flappy_bird');
 var pipe = require('../entities/pipe');
 var tops = require('../entities/top');
 // var settings = require("../settings");
+var marker = require('../entities/marker');
 
 var Bird = function(bus) {
     this.eventEmits = bus;
@@ -319,6 +330,10 @@ Bird.prototype.onCollision = function(entity) {
       this.eventEmits.emit('crash');
       this.reset();
     }
+    else if (entity instanceof marker.Marker) {
+      this.eventEmits.emit('markercrash', entity);
+      this.eventEmits.emit('scoreincrease');
+    }
 
 };
 
@@ -330,7 +345,37 @@ Bird.prototype.reset = function() {
 
 exports.Bird = Bird;
 
-},{"../components/collision/circle":1,"../components/graphics/bird":5,"../components/physics/physics":8,"../entities/pipe":11,"../entities/top":12,"../flappy_bird":13}],11:[function(require,module,exports){
+},{"../components/collision/circle":1,"../components/graphics/bird":5,"../components/physics/physics":8,"../entities/marker":11,"../entities/pipe":12,"../entities/top":13,"../flappy_bird":14}],11:[function(require,module,exports){
+var physicsComponent = require('../components/physics/physics');
+var collisionComponent = require("../components/collision/rect");
+var Pipe = require('../entities/pipe').Pipe;
+
+var Marker = function(pipe, bus) {
+  if(!(pipe && (pipe instanceof Pipe))){ return; }
+  this.pipe = pipe;
+  this.bus = bus;
+  this.width = .01;
+  this.height = 1;
+
+  var physics = new physicsComponent.PhysicsComponent(this);
+
+  physics.position.x = this.pipe.components.physics.position.x + this.pipe.width/2 + .01 + this.width/2;
+  physics.position.y = 0.5;
+  physics.velocity.x = this.pipe.components.physics.velocity.x;
+
+  var collision = new collisionComponent.RectCollisionComponent(this, {x: this.width, y:this.height});
+
+  this.components = {
+    physics: physics,
+    collision: collision
+  };
+
+
+};
+
+exports.Marker = Marker;
+
+},{"../components/collision/rect":2,"../components/physics/physics":8,"../entities/pipe":12}],12:[function(require,module,exports){
 //pipe entity
 
 var graphicsComponent = require("../components/graphics/pipe");
@@ -359,7 +404,7 @@ Pipe.prototype.onCollision = function(entity) {
 
 exports.Pipe = Pipe;
 
-},{"../components/collision/rect":2,"../components/graphics/pipe":6,"../components/physics/physics":8}],12:[function(require,module,exports){
+},{"../components/collision/rect":2,"../components/graphics/pipe":6,"../components/physics/physics":8}],13:[function(require,module,exports){
 //top entity
 
 var graphicsComponent = require("../components/graphics/top");
@@ -388,14 +433,14 @@ Top.prototype.onCollision = function(entity) {
 
 exports.Top = Top;
 
-},{"../components/collision/topbottom":3,"../components/graphics/top":7,"../components/physics/physics":8}],13:[function(require,module,exports){
+},{"../components/collision/topbottom":3,"../components/graphics/top":7,"../components/physics/physics":8}],14:[function(require,module,exports){
 var graphicsSystem = require('./systems/graphics');
 var physicsSystem = require('./systems/physics');
 var inputSystem = require('./systems/input');
 var makePipes = require('./systems/makepipes');
 var makeTop = require('./systems/maketop');
 var backgroundSystem = require('./systems/background');
-// var makeleft = require('');
+// var leftEdgeSystem = require('./systems/leftedge');
 
 //event emitter
 var events = require('events').EventEmitter;
@@ -403,7 +448,6 @@ var events = require('events').EventEmitter;
 var bird = require('./entities/bird');
 var pipe = require('./entities/pipe');
 var tops = require('./entities/top');
-
 // var leftEdge = require('./entities/leftedge');
 
 
@@ -418,6 +462,8 @@ var tops = require('./entities/top');
 
 var FlappyBird = function() {
     this.eventEmits = new events();
+    // this.score = 0;
+    // this.scoreUi = document.getElementById('score');
 
     this.entities = [new bird.Bird(this.eventEmits)];
     this.graphics = new graphicsSystem.GraphicsSystem(this.entities, this.eventEmits);
@@ -426,6 +472,9 @@ var FlappyBird = function() {
     this.pipes = new makePipes.MakePipes(this.entities, this.eventEmits);
     this.tops = new makeTop.MakeTop(this.entities, this.eventEmits);
     this.backgrounds = new backgroundSystem.BackgroundSystem(this.entities, this.eventEmits);
+    // this.leftEdgeCrash = new leftEdgeSystem.LeftEdgeSystem(this.entities, this.eventEmits);
+    // this.eventEmits.on('scoreincrease', this.scorePlus.bind(this));
+
 };
 
 FlappyBird.prototype.run = function() {
@@ -436,6 +485,8 @@ FlappyBird.prototype.run = function() {
     this.pipes.run();
     this.tops.run();
     this.backgrounds.run();
+    // this.leftEdgeCrash.run();
+
 };
 
 FlappyBird.prototype.reset = function() {
@@ -444,9 +495,16 @@ FlappyBird.prototype.reset = function() {
 
 };
 
+// FlappyBird.prototype.scorePlus = function() {
+//
+//   this.score++;
+//   this.scoreUi.textContent = this.score;
+//
+// };
+
 exports.FlappyBird = FlappyBird;
 
-},{"./entities/bird":10,"./entities/pipe":11,"./entities/top":12,"./systems/background":15,"./systems/graphics":17,"./systems/input":18,"./systems/makepipes":19,"./systems/maketop":20,"./systems/physics":21,"events":22}],14:[function(require,module,exports){
+},{"./entities/bird":10,"./entities/pipe":12,"./entities/top":13,"./systems/background":16,"./systems/graphics":18,"./systems/input":19,"./systems/makepipes":20,"./systems/maketop":21,"./systems/physics":22,"events":23}],15:[function(require,module,exports){
 var flappyBird = require('./flappy_bird');
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -455,7 +513,7 @@ document.addEventListener('DOMContentLoaded', function() {
     app.run();
 });
 
-},{"./flappy_bird":13}],15:[function(require,module,exports){
+},{"./flappy_bird":14}],16:[function(require,module,exports){
 var Background = require('../entities/background');
 
 var BackgroundSystem = function(entities, bus){
@@ -497,13 +555,13 @@ BackgroundSystem.prototype.run = function() {
 
 exports.BackgroundSystem = BackgroundSystem;
 
-},{"../entities/background":9}],16:[function(require,module,exports){
+},{"../entities/background":9}],17:[function(require,module,exports){
 var CollisionSystem = function(entities) {
     this.entities = entities;
 };
 
 CollisionSystem.prototype.tick = function() {
-    for (var i=0; i<this.entities.length; i++) {
+    for (var i=2; i<this.entities.length; i++) {
         var entityA = this.entities[i];
         if (!'collision' in entityA.components) {
             continue;
@@ -532,7 +590,7 @@ CollisionSystem.prototype.tick = function() {
 
 exports.CollisionSystem = CollisionSystem;
 
-},{}],17:[function(require,module,exports){
+},{}],18:[function(require,module,exports){
 var GraphicsSystem = function(entities) {
   this.entities = entities;
   // Canvas is where we draw
@@ -580,7 +638,7 @@ GraphicsSystem.prototype.tick = function() {
 
 exports.GraphicsSystem = GraphicsSystem
 
-},{}],18:[function(require,module,exports){
+},{}],19:[function(require,module,exports){
 var InputSystem = function(entities) {
     this.entities = entities;
 
@@ -601,8 +659,9 @@ InputSystem.prototype.onClick = function() {
 
 exports.InputSystem = InputSystem;
 
-},{}],19:[function(require,module,exports){
+},{}],20:[function(require,module,exports){
 var pipe = require('../entities/pipe');
+var marker = require('../entities/marker');
 
 var MakePipes = function(entities, bus) {
 
@@ -614,15 +673,16 @@ var MakePipes = function(entities, bus) {
 
   this.eventEmits = bus;
   this.eventEmits.on('crash', this.removePipes.bind(this));
+  this.eventEmits.on('markercrash', this.removeMarker.bind(this));
 };
 
 MakePipes.prototype.run = function() {
+    //every two seconds new Pipes
   this.interval = window.setInterval(this.tick.bind(this), 2000);
 };
 
 
 MakePipes.prototype.tick = function() {
-  //every two seconds new Pipes
   var right = 0.5 * this.canvas.width / this.canvas.height;
   var gapPosition = 0.4 + Math.random() * .2;
       // 0.2 is the pipe gap
@@ -637,7 +697,10 @@ MakePipes.prototype.tick = function() {
     y: height
   };
 
-  this.entities.push(new pipe.Pipe(position, size));
+  var pipe1 = new pipe.Pipe(position, size)
+
+  this.entities.push(pipe1);
+  this.makeMarker(pipe1);
 
   var height = 1 - gapPosition - 0.2 / 2;
 
@@ -650,7 +713,11 @@ MakePipes.prototype.tick = function() {
     y: height
   };
 
-  this.entities.push(new pipe.Pipe(position, size));
+  var pipe2 = new pipe.Pipe(position, size)
+
+  this.entities.push(pipe2);
+  this.makeMarker(pipe2);
+
 
 };
 
@@ -664,9 +731,24 @@ MakePipes.prototype.removePipes = function() {
   console.log("removing pipes");
 }
 
+
+MakePipes.prototype.makeMarker = function(pipe){
+  var newMarker = new marker.Marker(pipe, this.eventEmits);
+  this.entities.push(newMarker);
+  pipe.marker = newMarker;
+
+
+};
+
+MakePipes.prototype.removeMarker = function(marker){
+  var index = this.entities.indexOf(marker);
+  this.entities.splice(index, 1);
+
+};
+
 exports.MakePipes = MakePipes;
 
-},{"../entities/pipe":11}],20:[function(require,module,exports){
+},{"../entities/marker":11,"../entities/pipe":12}],21:[function(require,module,exports){
 var top = require('../entities/top');
 
 var MakeTop = function(entities, bus) {
@@ -690,7 +772,7 @@ MakeTop.prototype.run = function() {
 
   var right = .5 * this.canvas.width / this.canvas.height;
   var gapPosition = .5;
-  var height = gapPosition - .50;
+  var height = gapPosition - .5;
 
   var position = {
     x: right + 0.15 / 2,
@@ -703,7 +785,7 @@ MakeTop.prototype.run = function() {
 
   this.entities.push(new top.Top(position, size));
 
-  var height = 1 - gapPosition - .50;
+  var height = 1 - gapPosition - .5;
 
   var position = {
     x: right + 0.15 / 2,
@@ -732,7 +814,7 @@ MakeTop.prototype.removeTop = function() {
 
 exports.MakeTop = MakeTop;
 
-},{"../entities/top":12}],21:[function(require,module,exports){
+},{"../entities/top":13}],22:[function(require,module,exports){
 var collisionSystem = require("./collision");
 
 var PhysicsSystem = function(entities) {
@@ -758,7 +840,7 @@ PhysicsSystem.prototype.tick = function() {
 
 exports.PhysicsSystem = PhysicsSystem;
 
-},{"./collision":16}],22:[function(require,module,exports){
+},{"./collision":17}],23:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -1058,4 +1140,4 @@ function isUndefined(arg) {
   return arg === void 0;
 }
 
-},{}]},{},[14]);
+},{}]},{},[15]);

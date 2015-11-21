@@ -1,4 +1,5 @@
 var pipe = require('../entities/pipe');
+var marker = require('../entities/marker');
 
 var MakePipes = function(entities, bus) {
 
@@ -10,15 +11,16 @@ var MakePipes = function(entities, bus) {
 
   this.eventEmits = bus;
   this.eventEmits.on('crash', this.removePipes.bind(this));
+  this.eventEmits.on('markercrash', this.removeMarker.bind(this));
 };
 
 MakePipes.prototype.run = function() {
+    //every two seconds new Pipes
   this.interval = window.setInterval(this.tick.bind(this), 2000);
 };
 
 
 MakePipes.prototype.tick = function() {
-  //every two seconds new Pipes
   var right = 0.5 * this.canvas.width / this.canvas.height;
   var gapPosition = 0.4 + Math.random() * .2;
       // 0.2 is the pipe gap
@@ -33,7 +35,10 @@ MakePipes.prototype.tick = function() {
     y: height
   };
 
-  this.entities.push(new pipe.Pipe(position, size));
+  var pipe1 = new pipe.Pipe(position, size)
+
+  this.entities.push(pipe1);
+  this.makeMarker(pipe1);
 
   var height = 1 - gapPosition - 0.2 / 2;
 
@@ -46,7 +51,11 @@ MakePipes.prototype.tick = function() {
     y: height
   };
 
-  this.entities.push(new pipe.Pipe(position, size));
+  var pipe2 = new pipe.Pipe(position, size)
+
+  this.entities.push(pipe2);
+  this.makeMarker(pipe2);
+
 
 };
 
@@ -59,5 +68,20 @@ MakePipes.prototype.removePipes = function() {
   }
   console.log("removing pipes");
 }
+
+
+MakePipes.prototype.makeMarker = function(pipe){
+  var newMarker = new marker.Marker(pipe, this.eventEmits);
+  this.entities.push(newMarker);
+  pipe.marker = newMarker;
+
+
+};
+
+MakePipes.prototype.removeMarker = function(marker){
+  var index = this.entities.indexOf(marker);
+  this.entities.splice(index, 1);
+
+};
 
 exports.MakePipes = MakePipes;

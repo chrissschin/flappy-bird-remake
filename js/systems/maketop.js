@@ -21,7 +21,7 @@ MakeTop.prototype.run = function() {
 
   var right = .5 * this.canvas.width / this.canvas.height;
   var gapPosition = .5;
-  var height = gapPosition - .50;
+  var height = gapPosition - .5;
 
   var position = {
     x: right + 0.15 / 2,
@@ -34,7 +34,7 @@ MakeTop.prototype.run = function() {
 
   this.entities.push(new top.Top(position, size));
 
-  var height = 1 - gapPosition - .50;
+  var height = 1 - gapPosition - .5;
 
   var position = {
     x: right + 0.15 / 2,
