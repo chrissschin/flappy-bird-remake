@@ -26,8 +26,8 @@ var tops = require('./entities/top');
 
 var FlappyBird = function() {
     this.eventEmits = new events();
-    // this.score = 0;
-    // this.scoreUi = document.getElementById('score');
+    this.score = 0;
+    this.scoreUi = document.getElementById('score');
 
     this.entities = [new bird.Bird(this.eventEmits)];
     this.graphics = new graphicsSystem.GraphicsSystem(this.entities, this.eventEmits);
@@ -37,7 +37,8 @@ var FlappyBird = function() {
     this.tops = new makeTop.MakeTop(this.entities, this.eventEmits);
     this.backgrounds = new backgroundSystem.BackgroundSystem(this.entities, this.eventEmits);
     // this.leftEdgeCrash = new leftEdgeSystem.LeftEdgeSystem(this.entities, this.eventEmits);
-    // this.eventEmits.on('scoreincrease', this.scorePlus.bind(this));
+    this.eventEmits.on('scoreincrease', this.scorePlus.bind(this));
+    this.eventEmits.on('scoreReset', this.scorereset.bind(this));
 
 };
 
@@ -59,11 +60,19 @@ FlappyBird.prototype.reset = function() {
 
 };
 
-// FlappyBird.prototype.scorePlus = function() {
-//
-//   this.score++;
-//   this.scoreUi.textContent = this.score;
-//
-// };
+FlappyBird.prototype.scorePlus = function() {
+
+  this.score++;
+  this.scoreUi.textContent = this.score;
+
+};
+
+FlappyBird.prototype.scorereset = function() {
+
+  this.score = 0;
+  this.scoreUi.textContent = this.score;
+
+};
+
 
 exports.FlappyBird = FlappyBird;

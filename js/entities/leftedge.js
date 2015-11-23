@@ -14,6 +14,7 @@ var LeftEdge = function(position, size) {
 
     this.components = {
         physics: physics,
+        //dont need graphic
         graphics: graphics,
         collision: collision
     };

@@ -165,14 +165,10 @@ var BirdGraphicsComponent = function(entity) {
 BirdGraphicsComponent.prototype.draw = function(context) {
   var position = this.entity.components.physics.position;
   context.save();
-  // context.fillStyle ='green';
   context.translate(position.x, position.y);
   context.beginPath();
   context.scale(1, -1);
   context.drawImage(this.birdImage, 0, 0, .1, .1);
-  // context.arc(0, 0, 0.02, 0, 2 * Math.PI);
-  // context.fill();
-
   context.closePath();
 
 
@@ -328,6 +324,8 @@ Bird.prototype.onCollision = function(entity) {
 
     if (entity instanceof pipe.Pipe || entity instanceof tops.Top ) {
       this.eventEmits.emit('crash');
+      this.eventEmits.emit('scoreReset');
+      this.eventEmits.emit('markercrash', entity);
       this.reset();
     }
     else if (entity instanceof marker.Marker) {
@@ -359,7 +357,7 @@ var Marker = function(pipe, bus) {
 
   var physics = new physicsComponent.PhysicsComponent(this);
 
-  physics.position.x = this.pipe.components.physics.position.x + this.pipe.width/2 + .01 + this.width/2;
+  physics.position.x = this.pipe.components.physics.position.x + .15;
   physics.position.y = 0.5;
   physics.velocity.x = this.pipe.components.physics.velocity.x;
 
@@ -382,14 +380,14 @@ var graphicsComponent = require("../components/graphics/pipe");
 var physicsComponent = require('../components/physics/physics');
 var collisionComponent = require("../components/collision/rect");
 
-var Pipe = function(position, size) {
+var Pipe = function(position, size, bus) {
   var physics = new physicsComponent.PhysicsComponent(this);
   physics.position = position;
   physics.velocity.x = -.5;
 
   var graphics = new graphicsComponent.PipeGraphicsComponent(this, size);
   var collision = new collisionComponent.RectCollisionComponent(this, size);
-  collision.onCollision = this.onCollision.bind(this);
+  // collision.onCollision = this.onCollision.bind(this);
 
     this.components = {
         physics: physics,
@@ -398,9 +396,9 @@ var Pipe = function(position, size) {
     };
 };
 
-Pipe.prototype.onCollision = function(entity) {
-    console.log("Pipe collided with entity:", entity);
-};
+// Pipe.prototype.onCollision = function(entity) {
+//     console.log("Pipe collided with entity:", entity);
+// };
 
 exports.Pipe = Pipe;
 
@@ -462,8 +460,8 @@ var tops = require('./entities/top');
 
 var FlappyBird = function() {
     this.eventEmits = new events();
-    // this.score = 0;
-    // this.scoreUi = document.getElementById('score');
+    this.score = 0;
+    this.scoreUi = document.getElementById('score');
 
     this.entities = [new bird.Bird(this.eventEmits)];
     this.graphics = new graphicsSystem.GraphicsSystem(this.entities, this.eventEmits);
@@ -473,7 +471,8 @@ var FlappyBird = function() {
     this.tops = new makeTop.MakeTop(this.entities, this.eventEmits);
     this.backgrounds = new backgroundSystem.BackgroundSystem(this.entities, this.eventEmits);
     // this.leftEdgeCrash = new leftEdgeSystem.LeftEdgeSystem(this.entities, this.eventEmits);
-    // this.eventEmits.on('scoreincrease', this.scorePlus.bind(this));
+    this.eventEmits.on('scoreincrease', this.scorePlus.bind(this));
+    this.eventEmits.on('scoreReset', this.scorereset.bind(this));
 
 };
 
@@ -495,12 +494,20 @@ FlappyBird.prototype.reset = function() {
 
 };
 
-// FlappyBird.prototype.scorePlus = function() {
-//
-//   this.score++;
-//   this.scoreUi.textContent = this.score;
-//
-// };
+FlappyBird.prototype.scorePlus = function() {
+
+  this.score++;
+  this.scoreUi.textContent = this.score;
+
+};
+
+FlappyBird.prototype.scorereset = function() {
+
+  this.score = 0;
+  this.scoreUi.textContent = this.score;
+
+};
+
 
 exports.FlappyBird = FlappyBird;
 
@@ -622,12 +629,12 @@ GraphicsSystem.prototype.tick = function() {
   //Rendering goes here
   for (var i = 0; i<this.entities.length; i++) {
     var entity = this.entities[i];
-    if (!'graphics' in entity.components) {
+    if (!('graphics' in entity.components)) {
       continue;
     }
 
     entity.components.graphics.draw(this.context);
-    
+
   }
 
   this.context.restore();
@@ -670,6 +677,7 @@ var MakePipes = function(entities, bus) {
   this.canvas = document.getElementById('main-canvas');
 
   this.interval = null;
+  this.count = 0;
 
   this.eventEmits = bus;
   this.eventEmits.on('crash', this.removePipes.bind(this));
@@ -679,45 +687,51 @@ var MakePipes = function(entities, bus) {
 MakePipes.prototype.run = function() {
     //every two seconds new Pipes
   this.interval = window.setInterval(this.tick.bind(this), 2000);
+
+};
+
+MakePipes.prototype.makeNewPipes = function() {
+
+  var offScreen = this.canvas.width / this.canvas.height / 2;
+  var newPipe;
+  var size =  {
+    x: .075,
+    y: .5
+  }
+
+  if (parseInt(this.count) % 2 === 0) {
+    var position = {
+      x: offScreen + .075 / 2,
+      y: .5 - .5/2
+    };
+
+    newPipe = new pipe.Pipe(position, size, this.eventEmits);
+
+    this.entities.push(newPipe);
+
+  }
+  else {
+    var position = {
+      x: offScreen + .075 / 2,
+      y: 1 - .5/2
+    };
+
+      newPipe = new pipe.Pipe(position, size, this.eventEmits);
+
+      this.entities.push(newPipe);
+  }
+
+  this.makeMarker(newPipe);
+  this.count++
+
+
+
 };
 
 
 MakePipes.prototype.tick = function() {
-  var right = 0.5 * this.canvas.width / this.canvas.height;
-  var gapPosition = 0.4 + Math.random() * .2;
-      // 0.2 is the pipe gap
-  var height = gapPosition - 0.2 / 2;
 
-  var position = {
-    x: right + 0.15 / 2,
-    y: height / 2
-  };
-  var size = {
-    x: 0.15,
-    y: height
-  };
-
-  var pipe1 = new pipe.Pipe(position, size)
-
-  this.entities.push(pipe1);
-  this.makeMarker(pipe1);
-
-  var height = 1 - gapPosition - 0.2 / 2;
-
-  var position = {
-    x: right + 0.15 / 2,
-    y: 1 - height / 2
-  };
-  var size = {
-    x: 0.15,
-    y: height
-  };
-
-  var pipe2 = new pipe.Pipe(position, size)
-
-  this.entities.push(pipe2);
-  this.makeMarker(pipe2);
-
+  this.makeNewPipes();
 
 };
 
@@ -725,11 +739,16 @@ MakePipes.prototype.removePipes = function() {
   for (var i = this.entities.length - 1; i >= 0; i-- ) {
     var entity = this.entities[i];
     if (entity instanceof pipe.Pipe) {
+      this.removeMarker();
       this.entities.splice(i, 1);
-    }
+
   }
-  console.log("removing pipes");
-}
+};
+  console.log("removing pipes and markers");
+
+};
+
+
 
 
 MakePipes.prototype.makeMarker = function(pipe){

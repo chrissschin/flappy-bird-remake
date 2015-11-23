@@ -30,6 +30,8 @@ Bird.prototype.onCollision = function(entity) {
 
     if (entity instanceof pipe.Pipe || entity instanceof tops.Top ) {
       this.eventEmits.emit('crash');
+      this.eventEmits.emit('scoreReset');
+      this.eventEmits.emit('markercrash', entity);
       this.reset();
     }
     else if (entity instanceof marker.Marker) {

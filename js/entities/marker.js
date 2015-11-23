@@ -11,7 +11,7 @@ var Marker = function(pipe, bus) {
 
   var physics = new physicsComponent.PhysicsComponent(this);
 
-  physics.position.x = this.pipe.components.physics.position.x + this.pipe.width/2 + .01 + this.width/2;
+  physics.position.x = this.pipe.components.physics.position.x + .15;
   physics.position.y = 0.5;
   physics.velocity.x = this.pipe.components.physics.velocity.x;
 

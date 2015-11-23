@@ -8,6 +8,7 @@ var MakePipes = function(entities, bus) {
   this.canvas = document.getElementById('main-canvas');
 
   this.interval = null;
+  this.count = 0;
 
   this.eventEmits = bus;
   this.eventEmits.on('crash', this.removePipes.bind(this));
@@ -17,45 +18,51 @@ var MakePipes = function(entities, bus) {
 MakePipes.prototype.run = function() {
     //every two seconds new Pipes
   this.interval = window.setInterval(this.tick.bind(this), 2000);
+
+};
+
+MakePipes.prototype.makeNewPipes = function() {
+
+  var offScreen = this.canvas.width / this.canvas.height / 2;
+  var newPipe;
+  var size =  {
+    x: .075,
+    y: .5
+  }
+
+  if (parseInt(this.count) % 2 === 0) {
+    var position = {
+      x: offScreen + .075 / 2,
+      y: .5 - .5/2
+    };
+
+    newPipe = new pipe.Pipe(position, size, this.eventEmits);
+
+    this.entities.push(newPipe);
+
+  }
+  else {
+    var position = {
+      x: offScreen + .075 / 2,
+      y: 1 - .5/2
+    };
+
+      newPipe = new pipe.Pipe(position, size, this.eventEmits);
+
+      this.entities.push(newPipe);
+  }
+
+  this.makeMarker(newPipe);
+  this.count++
+
+
+
 };
 
 
 MakePipes.prototype.tick = function() {
-  var right = 0.5 * this.canvas.width / this.canvas.height;
-  var gapPosition = 0.4 + Math.random() * .2;
-      // 0.2 is the pipe gap
-  var height = gapPosition - 0.2 / 2;
 
-  var position = {
-    x: right + 0.15 / 2,
-    y: height / 2
-  };
-  var size = {
-    x: 0.15,
-    y: height
-  };
-
-  var pipe1 = new pipe.Pipe(position, size)
-
-  this.entities.push(pipe1);
-  this.makeMarker(pipe1);
-
-  var height = 1 - gapPosition - 0.2 / 2;
-
-  var position = {
-    x: right + 0.15 / 2,
-    y: 1 - height / 2
-  };
-  var size = {
-    x: 0.15,
-    y: height
-  };
-
-  var pipe2 = new pipe.Pipe(position, size)
-
-  this.entities.push(pipe2);
-  this.makeMarker(pipe2);
-
+  this.makeNewPipes();
 
 };
 
@@ -63,11 +70,16 @@ MakePipes.prototype.removePipes = function() {
   for (var i = this.entities.length - 1; i >= 0; i-- ) {
     var entity = this.entities[i];
     if (entity instanceof pipe.Pipe) {
+      this.removeMarker();
       this.entities.splice(i, 1);
-    }
+
   }
-  console.log("removing pipes");
-}
+};
+  console.log("removing pipes and markers");
+
+};
+
+
 
 
 MakePipes.prototype.makeMarker = function(pipe){
